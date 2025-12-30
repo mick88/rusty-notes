@@ -1,14 +1,17 @@
-mod database;
 mod models;
+mod notes;
+mod ui;
 
-use crate::database::{get_database_connection, load_notes, save_note};
-use rusqlite::{Connection, Error};
+use crate::notes::NoteManager;
+use rusqlite::Error;
 
 fn main() -> Result<(), Error> {
-    let connection: Connection = get_database_connection()?;
+    let note_manager = NoteManager::new().expect("Unable to open notes database");
 
-    let notes = load_notes(&connection)?;
-    notes.iter().for_each(|x| println!("{}: {}", x.name, x.contents));
+    let notes = note_manager.load_notes()?;
+    notes
+        .iter()
+        .for_each(|x| println!("{}: {}", x.name, x.contents));
 
     Ok(())
 }
