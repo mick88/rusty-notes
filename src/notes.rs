@@ -14,7 +14,8 @@ impl NoteManager {
         connection.execute("CREATE TABLE IF NOT EXISTS notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            contents TEXT NOT NULL
+            contents TEXT NOT NULL,
+            updated DATETIME DEFAULT CURRENT_TIMESTAMP
         )", ())?;
 
         Ok(connection)
@@ -27,7 +28,7 @@ impl NoteManager {
     }
 
     pub fn load_notes(&self) -> Result<Vec<Note>, Error> {
-        let mut stmt = self.connection.prepare("SELECT id, name, contents FROM notes")?;
+        let mut stmt = self.connection.prepare("SELECT id, name, contents FROM notes ORDER BY updated DESC")?;
 
         let iterator = stmt.query_map([], |row| {
             Ok(Note {
@@ -47,7 +48,7 @@ impl NoteManager {
     }
 
     fn update_note(&self, note: &Note) -> Result<(), Error> {
-        self.connection.execute("UPDATE notes SET name=?1, contents=?2 WHERE id=?3)", params![note.name, note.contents, note.id.unwrap()])?;
+        self.connection.execute("UPDATE notes SET name=?1, contents=?2, SET updated = datetime('now') WHERE id=?3)", params![note.name, note.contents, note.id.unwrap()])?;
         Ok(())
     }
 
