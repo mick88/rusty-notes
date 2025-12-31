@@ -4,7 +4,7 @@ use crate::notes::NoteManager;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState};
 use ratatui::backend::Backend;
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 use ratatui::{Frame, Terminal};
 use std::error::Error;
 use std::io;
@@ -23,6 +23,8 @@ pub struct NotesApp {
     state: ListState,
     notes: Vec<Note>,
     exit: bool,
+    input_buffer: String,
+    editing_note: Option<usize>,
 }
 
 impl NotesApp {
@@ -32,6 +34,8 @@ impl NotesApp {
             state: ListState::default(),
             notes: notes.load_notes()?,
             exit: false,
+            input_buffer: String::new(),
+            editing_note: None,
         };
         app.jump_list(1);
         Ok(app)
@@ -53,8 +57,17 @@ impl NotesApp {
 
                 frame.render_stateful_widget(list, chunks[0], &mut self.state.clone());
             }
-            _ => {
-                // TODO
+            CurrentScreen::NoteEditor => {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Percentage(100)].as_ref())
+                    .split(frame.area());
+                let block = Block::default().title("Note").borders(Borders::ALL);
+
+                let paragraph = Paragraph::new(self.input_buffer.as_str()).block(block)
+                    .style(Style::default().fg(Color::White));
+
+                frame.render_widget(paragraph, chunks[0]);
             }
         }
     }
@@ -91,7 +104,11 @@ impl NotesApp {
                         self.jump_list(-1);
                     }
                     KeyCode::Enter => {
-                        todo!("Select item")
+                        if let Some(i) = self.state.selected() {
+                            self.editing_note = Some(i);
+                            self.input_buffer = self.notes[i].contents.clone();
+                            self.screen = CurrentScreen::NoteEditor;
+                        }
                     }
                     KeyCode::Esc => {
                         self.exit = true;
@@ -99,8 +116,20 @@ impl NotesApp {
                     _ => {}
                 }
             }
-            CurrentScreen::NoteEditor => {}
+            CurrentScreen::NoteEditor => {
+                match key.code {
+                    KeyCode::Esc => {
+                        self.save_buffer();
+                        self.screen = CurrentScreen::NoteList;
+                    },
+                    _ => {},
+                }
+            }
         }
+    }
+
+    fn save_buffer(&mut self) {
+        // TODO: Save current note
     }
 }
 
