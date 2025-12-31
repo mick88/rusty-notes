@@ -12,29 +12,31 @@ use ratatui::layout::{Constraint, Layout};
 use ratatui::prelude::{Direction, Line};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
+use tui_textarea::TextArea;
 
 enum CurrentScreen {
     NoteList,
     NoteEditor,
 }
 
-pub struct NotesApp {
+pub struct NotesApp<'a> {
     screen: CurrentScreen,
     state: ListState,
     notes: Vec<Note>,
     exit: bool,
-    input_buffer: String,
+    // Note editor
+    editor: TextArea<'a>,
     editing_note: Option<usize>,
 }
 
-impl NotesApp {
+impl<'a> NotesApp<'a> {
     pub fn new(notes: &NoteManager) -> Result<Self, Box<dyn Error>> {
         let mut app = NotesApp {
             screen: CurrentScreen::NoteList,
             state: ListState::default(),
             notes: notes.load_notes()?,
             exit: false,
-            input_buffer: String::new(),
+            editor: TextArea::default(),
             editing_note: None,
         };
         app.jump_list(1);
@@ -62,12 +64,8 @@ impl NotesApp {
                     .direction(Direction::Vertical)
                     .constraints([Constraint::Percentage(100)].as_ref())
                     .split(frame.area());
-                let block = Block::default().title("Note").borders(Borders::ALL);
 
-                let paragraph = Paragraph::new(self.input_buffer.as_str()).block(block)
-                    .style(Style::default().fg(Color::White));
-
-                frame.render_widget(paragraph, chunks[0]);
+                frame.render_widget(self.editor.widget(), chunks[0]);
             }
         }
     }
@@ -106,7 +104,12 @@ impl NotesApp {
                     KeyCode::Enter => {
                         if let Some(i) = self.state.selected() {
                             self.editing_note = Some(i);
-                            self.input_buffer = self.notes[i].contents.clone();
+                            let note = &self.notes[i];
+
+                            self.editor = TextArea::from(note.contents.lines());
+                            self.editor.set_block(Block::default().borders(Borders::ALL).title(note.name.clone()));
+                            self.editor.set_style(Style::default().fg(Color::Black).bg(Color::White));
+
                             self.screen = CurrentScreen::NoteEditor;
                         }
                     }
