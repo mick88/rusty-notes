@@ -97,7 +97,6 @@ impl<'a, 'b> NotesApp<'a, 'b> {
         match self.screen {
             CurrentScreen::NoteList => {},
             CurrentScreen::NoteEditor => {
-
                 self.editor.input(event);
             }
         }
@@ -133,7 +132,7 @@ impl<'a, 'b> NotesApp<'a, 'b> {
             }
             CurrentScreen::NoteEditor => {
                 match key.code {
-                    KeyCode::Esc => {
+                    KeyCode::Esc | KeyCode::F(12) => {
                         self.save_current_note().expect("Failed to save the note")
                     },
                     _ => {},
@@ -157,11 +156,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut NotesApp) -> io
         terminal.draw(|frame| app.render(frame)).expect("Failed to render screen");
         let result = event::read()?;
         if let Event::Key(key) = result {
-            if key.code != KeyCode::Esc {
-                app.on_event(result.clone());
-            }
             if key.kind == KeyEventKind::Press {
                 app.on_key_press(key);
+            }
+            if !app.exit {
+                app.on_event(result.clone());
             }
         }
 
