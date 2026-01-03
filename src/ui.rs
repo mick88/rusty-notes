@@ -91,6 +91,16 @@ impl<'a> NotesApp<'a> {
         self.state.select(Some(min(i.try_into().unwrap(), size as usize)));
     }
 
+    fn on_event(&mut self, event: Event) {
+        match self.screen {
+            CurrentScreen::NoteList => {},
+            CurrentScreen::NoteEditor => {
+
+                self.editor.input(event);
+            }
+        }
+    }
+
     fn on_key_press(&mut self, key: KeyEvent) {
         match self.screen {
             CurrentScreen::NoteList => {
@@ -116,7 +126,7 @@ impl<'a> NotesApp<'a> {
                     KeyCode::Esc => {
                         self.exit = true;
                     },
-                    _ => {}
+                    _ => {},
                 }
             }
             CurrentScreen::NoteEditor => {
@@ -139,8 +149,10 @@ impl<'a> NotesApp<'a> {
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut NotesApp) -> io::Result<()> {
     loop {
         terminal.draw(|frame| app.render(frame));
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Release {
+        let result = event::read()?;
+        app.on_event(result.clone());
+        if let Event::Key(key) = result {
+            if key.kind == KeyEventKind::Press {
                 app.on_key_press(key);
             }
         }

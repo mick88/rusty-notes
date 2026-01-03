@@ -7,4 +7,4 @@ edition = "2024"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
 ratatui = "0.29.0"
 tui-textarea = "0.7.0"
-crossterm = "0.29.0"
+crossterm = "0.28.1"
