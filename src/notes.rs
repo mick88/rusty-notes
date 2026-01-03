@@ -48,7 +48,7 @@ impl NoteManager {
     }
 
     fn update_note(&self, note: &Note) -> Result<(), Error> {
-        self.connection.execute("UPDATE notes SET name=?1, contents=?2, SET updated = datetime('now') WHERE id=?3)", params![note.name, note.contents, note.id.unwrap()])?;
+        self.connection.execute("UPDATE notes SET name=?1, contents=?2, updated = datetime('now') WHERE id=?3", params![note.name, note.contents, note.id.unwrap()])?;
         Ok(())
     }
 
