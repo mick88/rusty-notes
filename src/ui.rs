@@ -154,7 +154,7 @@ impl<'a, 'b> NotesApp<'a, 'b> {
 
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut NotesApp) -> io::Result<()> {
     loop {
-        terminal.draw(|frame| app.render(frame));
+        terminal.draw(|frame| app.render(frame)).expect("Failed to render screen");
         let result = event::read()?;
         if let Event::Key(key) = result {
             if key.code != KeyCode::Esc {
