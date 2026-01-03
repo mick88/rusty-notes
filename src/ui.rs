@@ -19,7 +19,7 @@ enum CurrentScreen {
     NoteEditor,
 }
 
-pub struct NotesApp<'a> {
+pub struct NotesApp<'a, 'b> {
     screen: CurrentScreen,
     state: ListState,
     notes: Vec<Note>,
@@ -27,17 +27,19 @@ pub struct NotesApp<'a> {
     // Note editor
     editor: TextArea<'a>,
     editing_note: Option<usize>,
+    manager: &'b NoteManager,
 }
 
-impl<'a> NotesApp<'a> {
-    pub fn new(notes: &NoteManager) -> Result<Self, Box<dyn Error>> {
+impl<'a, 'b> NotesApp<'a, 'b> {
+    pub fn new(manager: &'b NoteManager) -> Result<Self, Box<dyn Error>> {
         let mut app = NotesApp {
             screen: CurrentScreen::NoteList,
             state: ListState::default(),
-            notes: notes.load_notes()?,
+            notes: manager.load_notes()?,
             exit: false,
             editor: TextArea::default(),
             editing_note: None,
+            manager,
         };
         app.jump_list(1);
         Ok(app)
@@ -132,8 +134,7 @@ impl<'a> NotesApp<'a> {
             CurrentScreen::NoteEditor => {
                 match key.code {
                     KeyCode::Esc => {
-                        self.save_buffer();
-                        self.screen = CurrentScreen::NoteList;
+                        self.save_current_note().expect("Failed to save the note")
                     },
                     _ => {},
                 }
@@ -141,8 +142,13 @@ impl<'a> NotesApp<'a> {
         }
     }
 
-    fn save_buffer(&mut self) {
-        // TODO: Save current note
+    fn save_current_note(&mut self) -> Result<(), rusqlite::Error> {
+        let i = self.editing_note.expect("No note selected");
+        let note = &mut self.notes[i];
+        let editor_lines = self.editor.lines();
+        note.name = editor_lines[0].clone();
+        note.contents = editor_lines.join("\n");
+        self.manager.save_note(note)
     }
 }
 
@@ -150,8 +156,10 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut NotesApp) -> io
     loop {
         terminal.draw(|frame| app.render(frame));
         let result = event::read()?;
-        app.on_event(result.clone());
         if let Event::Key(key) = result {
+            if key.code != KeyCode::Esc {
+                app.on_event(result.clone());
+            }
             if key.kind == KeyEventKind::Press {
                 app.on_key_press(key);
             }
