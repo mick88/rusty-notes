@@ -14,7 +14,7 @@ use std::io;
 fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    crossterm::execute!(stdout, EnterAlternateScreen)?;
 
     let tui_backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(tui_backend)?;
@@ -28,7 +28,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     crossterm::execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        DisableMouseCapture,
     )?;
     terminal.show_cursor()?;
 
