@@ -138,7 +138,9 @@ impl<'a, 'b> NotesApp<'a, 'b> {
             CurrentScreen::NoteEditor => {
                 match key.code {
                     KeyCode::Esc | KeyCode::F(12) => {
-                        self.save_current_note().expect("Failed to save the note")
+                        self.save_current_note().expect("Failed to save the note");
+                        self.screen = CurrentScreen::NoteList;
+                        self.editing_note = None;
                     },
                     _ => {},
                 }
