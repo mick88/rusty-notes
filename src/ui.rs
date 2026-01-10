@@ -112,16 +112,12 @@ impl<'a, 'b> NotesApp<'a, 'b> {
                     KeyCode::Up => {
                         self.jump_list(-1);
                     }
+                    KeyCode::Insert => {
+                        self.enter_edit_screen(None)
+                    }
                     KeyCode::Enter => {
                         if let Some(i) = self.state.selected() {
-                            self.editing_note = Some(i);
-                            let note = &self.notes[i];
-
-                            self.editor = TextArea::from(note.contents.lines());
-                            self.editor.set_block(Block::default().borders(Borders::ALL).title(note.name.clone()));
-                            self.editor.set_style(Style::default().fg(Color::Black).bg(Color::White));
-
-                            self.screen = CurrentScreen::NoteEditor;
+                            self.enter_edit_screen(Some(i));
                         }
                     }
                     KeyCode::Esc => {
@@ -150,8 +146,20 @@ impl<'a, 'b> NotesApp<'a, 'b> {
         }
     }
 
-    fn enter_edit_screen(&mut self, note: &Note) {
-        self.editing_note = self.notes.iter().position(|n| {n.id == note.id});
+    fn enter_edit_screen(&mut self, note_index: Option<usize>) {
+        let note: &Note;
+        match note_index {
+            Some(i) => {
+                self.editing_note = Some(i);
+                note = &self.notes[i];
+            },
+            None => {
+                let new = Note::new("New note".to_string(), String::default());
+                self.notes.insert(0, new);
+                note = &self.notes[0];
+                self.editing_note = Some(0);
+            }
+        }
 
         self.editor = TextArea::from(note.contents.lines());
         self.editor.set_block(Block::default().borders(Borders::ALL).title(note.name.clone()));
