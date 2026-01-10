@@ -59,4 +59,9 @@ impl NoteManager {
             self.update_note(note)
         }
     }
+    
+    pub fn delete_note(&self, id: i32) -> Result<(), Error> {
+        self.connection.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
+        Ok(())
+    }
 }

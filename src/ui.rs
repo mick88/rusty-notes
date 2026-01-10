@@ -127,6 +127,15 @@ impl<'a, 'b> NotesApp<'a, 'b> {
                     KeyCode::Esc => {
                         self.exit = true;
                     },
+                    KeyCode::Delete => {
+                        if let Some(i) = self.state.selected() {
+                            if let Some(note_id) = self.notes[i].id {
+                                if let Ok(result) = self.manager.delete_note(note_id) {
+                                    self.notes.remove(i);
+                                }
+                            }
+                        }
+                    },
                     _ => {},
                 }
             }
@@ -139,6 +148,16 @@ impl<'a, 'b> NotesApp<'a, 'b> {
                 }
             }
         }
+    }
+
+    fn enter_edit_screen(&mut self, note: &Note) {
+        self.editing_note = self.notes.iter().position(|n| {n.id == note.id});
+
+        self.editor = TextArea::from(note.contents.lines());
+        self.editor.set_block(Block::default().borders(Borders::ALL).title(note.name.clone()));
+        self.editor.set_style(Style::default().fg(Color::Black).bg(Color::White));
+
+        self.screen = CurrentScreen::NoteEditor;
     }
 
     fn save_current_note(&mut self) -> Result<(), rusqlite::Error> {
