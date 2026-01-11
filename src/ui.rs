@@ -134,6 +134,7 @@ impl<'a, 'b> NotesApp<'a, 'b> {
                     },
                     _ => {},
                 }
+                return;
             }
             CurrentScreen::NoteEditor => {
                 match key.code {
@@ -185,7 +186,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut NotesApp) -> io
         terminal.draw(|frame| app.render(frame)).expect("Failed to render screen");
         let result = event::read()?;
         if let Event::Key(key) = result {
-            if key.kind == KeyEventKind::Press {
+            if key.kind == KeyEventKind::Release {
                 app.on_key_press(key);
             }
             if !app.exit {
