@@ -57,7 +57,7 @@ impl<'a, 'b> NotesApp<'a, 'b> {
 
                 let list = List::new(items).block(Block::default().borders(Borders::ALL).title("Notes")).highlight_style(
                     Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD),
-                ).highlight_symbol("👉 ");
+                ).highlight_symbol("> ");
 
                 frame.render_stateful_widget(list, chunks[0], &mut self.state.clone());
             }
