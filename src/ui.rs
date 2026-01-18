@@ -14,19 +14,16 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Span;
 use tui_textarea::TextArea;
 
-enum CurrentScreen {
+enum CurrentScreen<'a> {
     NoteList,
-    NoteEditor,
+    NoteEditor(TextArea<'a>, usize),
 }
 
 pub struct NotesApp<'a, 'b> {
-    screen: CurrentScreen,
+    screen: CurrentScreen<'a>,
     state: ListState,
     notes: Vec<Note>,
     exit: bool,
-    // Note editor
-    editor: TextArea<'a>,
-    editing_note: Option<usize>,
     manager: &'b NoteManager,
 }
 
@@ -37,8 +34,6 @@ impl<'a, 'b> NotesApp<'a, 'b> {
             state: ListState::default(),
             notes: manager.load_notes()?,
             exit: false,
-            editor: TextArea::default(),
-            editing_note: None,
             manager,
         };
         app.jump_list(1);
@@ -46,7 +41,7 @@ impl<'a, 'b> NotesApp<'a, 'b> {
     }
 
     fn render(&self, frame: &mut Frame) {
-        match self.screen {
+        match &self.screen {
             CurrentScreen::NoteList => {
                 let chunks = Layout::default().direction(Direction::Vertical).constraints([Constraint::Min(0)].as_ref()).split(frame.area());
 
@@ -61,13 +56,12 @@ impl<'a, 'b> NotesApp<'a, 'b> {
 
                 frame.render_stateful_widget(list, chunks[0], &mut self.state.clone());
             }
-            CurrentScreen::NoteEditor => {
+            CurrentScreen::NoteEditor(editor, _) => {
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([Constraint::Percentage(100)].as_ref())
                     .split(frame.area());
-
-                frame.render_widget(self.editor.widget(), chunks[0]);
+                frame.render_widget(editor.widget(), chunks[0]);
             }
         }
     }
@@ -94,10 +88,10 @@ impl<'a, 'b> NotesApp<'a, 'b> {
     }
 
     fn on_event(&mut self, event: Event) {
-        match self.screen {
+        match &mut self.screen {
             CurrentScreen::NoteList => {},
-            CurrentScreen::NoteEditor => {
-                self.editor.input(event);
+            CurrentScreen::NoteEditor(editor, _) => {
+                editor.input(event);
             }
         }
     }
@@ -136,12 +130,11 @@ impl<'a, 'b> NotesApp<'a, 'b> {
                 }
                 return;
             }
-            CurrentScreen::NoteEditor => {
+            CurrentScreen::NoteEditor(_, _) => {
                 match key.code {
                     KeyCode::Esc | KeyCode::F(12) => {
                         self.save_current_note().expect("Failed to save the note");
                         self.screen = CurrentScreen::NoteList;
-                        self.editing_note = None;
                     },
                     _ => {},
                 }
@@ -151,30 +144,30 @@ impl<'a, 'b> NotesApp<'a, 'b> {
 
     fn enter_edit_screen(&mut self, note_index: Option<usize>) {
         let note: &Note;
-        match note_index {
+        let editing_note= match note_index {
             Some(i) => {
-                self.editing_note = Some(i);
                 note = &self.notes[i];
+                i
             },
             None => {
                 let new = Note::new("New note".to_string(), String::default());
                 self.notes.insert(0, new);
                 note = &self.notes[0];
-                self.editing_note = Some(0);
+                0
             }
-        }
+        };
 
-        self.editor = TextArea::from(note.contents.lines());
-        self.editor.set_block(Block::default().borders(Borders::ALL).title(note.name.clone()));
-        self.editor.set_style(Style::default().fg(Color::Black).bg(Color::White));
+        let mut editor = TextArea::from(note.contents.lines());
+        editor.set_block(Block::default().borders(Borders::ALL).title(note.name.clone()));
+        editor.set_style(Style::default().fg(Color::Black).bg(Color::White));
 
-        self.screen = CurrentScreen::NoteEditor;
+        self.screen = CurrentScreen::NoteEditor(editor, editing_note);
     }
 
     fn save_current_note(&mut self) -> Result<(), rusqlite::Error> {
-        let i = self.editing_note.expect("No note selected");
-        let note = &mut self.notes[i];
-        let editor_lines = self.editor.lines();
+        let CurrentScreen::NoteEditor(editor, i) = &self.screen else { panic!("Save invoked outside of Editor screen") };
+        let note = &mut self.notes[*i];
+        let editor_lines = editor.lines();
         note.name = editor_lines[0].clone();
         note.contents = editor_lines.join("\n");
         self.manager.save_note(note)
